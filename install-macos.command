@@ -1,13 +1,53 @@
 #!/bin/bash
 set -euo pipefail
 umask 077
-version="1.0.0"
+version="1.0.1"
 install_root="$HOME/Library/Application Support/ALLTV-MCP"
 config_path="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 skip_claude=0
 custom_config=0
 
 fail() { printf 'ALLTV installation failed: %s\n' "$*" >&2; exit 1; }
+confirm_yes_no() {
+    local answer
+    while true; do
+        printf '%s (yes/no) ' "$1"
+        IFS= read -r answer || fail "No answer received. Run the installer in an interactive Terminal."
+        case "$answer" in
+            [Yy]|[Yy][Ee][Ss]) return 0 ;;
+            [Nn]|[Nn][Oo]) return 1 ;;
+            *) printf 'Please answer yes or no.\n' ;;
+        esac
+    done
+}
+claude_pids() {
+    /bin/ps -axo pid=,comm= | /usr/bin/awk '$0 ~ /\/Claude[.]app\/Contents\// {print $1}'
+}
+stop_claude_with_consent() {
+    local pids pid attempt
+    pids="$(claude_pids)"
+    [[ -n "$pids" ]] || return 0
+    if ! confirm_yes_no "Claude is running. Stop all Claude processes? Unsaved work may be lost."; then
+        fail "Installation cancelled. Quit Claude Desktop before running this installer again."
+    fi
+    for pid in $pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -TERM "$pid" || fail "Unable to stop Claude process $pid."
+        fi
+    done
+    for ((attempt=0; attempt<20; attempt++)); do
+        pids="$(claude_pids)"
+        [[ -n "$pids" ]] || return 0
+        /bin/sleep 0.5
+    done
+    for pid in $pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" || fail "Unable to stop Claude process $pid."
+        fi
+    done
+    /bin/sleep 0.5
+    [[ -z "$(claude_pids)" ]] || fail "Some Claude processes are still running. Quit them and rerun the installer."
+}
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --install-root) [[ $# -ge 2 ]] || fail "Missing --install-root value."; install_root="$2"; shift 2 ;;
@@ -24,8 +64,13 @@ macos_major="${macos_version%%.*}"
 macos_minor="${macos_version#*.}"
 macos_minor="${macos_minor%%.*}"
 [[ "$macos_major" -gt 13 || ( "$macos_major" -eq 13 && "$macos_minor" -ge 5 ) ]] || fail "macOS 13.5 or newer is required by the private Node.js runtime."
-if [[ "$skip_claude" == 0 ]] && /usr/bin/pgrep -x Claude >/dev/null; then
-    fail "Fully quit Claude Desktop, then run this installer again."
+needs_claude=0
+if [[ "$skip_claude" == 0 ]]; then
+    stop_claude_with_consent
+    if [[ ! -d /Applications/Claude.app && ! -d "$HOME/Applications/Claude.app" ]]; then
+        confirm_yes_no "Claude Desktop is not installed. Install it now?" || fail "This install requires Claude Desktop"
+        needs_claude=1
+    fi
 fi
 case "$(uname -m)" in
     arm64) arch="arm64" ;;
@@ -82,7 +127,7 @@ if [[ ! -x "$node" ]]; then
     /bin/mv "$work/$node_name" "$runtime"
 fi
 [[ "$("$node" --version)" == "v$node_version" ]] || fail "The private Node.js runtime is not the expected version."
-if [[ "$skip_claude" == 0 && ! -d /Applications/Claude.app && ! -d "$HOME/Applications/Claude.app" ]]; then
+if [[ "$needs_claude" == 1 ]]; then
     printf 'Installing Claude Desktop into ~/Applications...\n'
     download "$(value claude.macos.url)" "$work/claude.zip"
     check_hash "$work/claude.zip" "$(value claude.macos.sha256)"
@@ -107,6 +152,7 @@ printf 'Installing locked ALLTV dependencies (no package install scripts)...\n'
     "$node" "$runtime/lib/node_modules/npm/bin/npm-cli.js" ci --prefix "$launcher" --omit=dev --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org
 )
 "$node" "$source_dir/tools/verify.mjs" "$node" "$launcher/launch.mjs"
+if [[ "$skip_claude" == 0 ]]; then stop_claude_with_consent; fi
 "$node" "$source_dir/tools/configure.mjs" --config "$config_path" --runtime "$node" --launcher "$launcher/launch.mjs"
 printf 'ALLTV installed successfully at %s\nClaude settings: %s\n' "$deployment" "$config_path"
 printf 'Open Claude Desktop and start a new chat. Run /my-tv-opportunities or request an ALLTV action.\n'

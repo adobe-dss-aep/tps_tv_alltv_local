@@ -6,27 +6,37 @@ macOS 13.5+ Intel/Apple Silicon are supported.
 
 ## Install
 
-Fully quit Claude Desktop before installing. On Windows, also quit its tray
-icon. Do not reopen it until setup finishes. No administrator access should
+Save your Claude work before installing. If Claude is running, setup asks
+**yes/no** whether to stop all Claude processes, including helpers. Answering
+**yes** stops them; **no** cancels setup without stopping them. Do not reopen
+Claude until setup finishes. If Claude Desktop is missing, setup asks
+**yes/no** whether to install it. Answering **no** stops setup with
+`This install requires Claude Desktop`. No administrator access should
 be needed for ALLTV or its private Node.js runtime; corporate device policies
 may still require IT approval for Claude Desktop.
 
 ### Windows 10/11
 
-Download [install-windows.ps1](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.0/install-windows.ps1)
+Download [install-windows.ps1](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.1/install-windows.ps1)
 and save it in Downloads. Open **Windows PowerShell** and run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\Downloads\install-windows.ps1"
+cd "$HOME\Downloads"
+Unblock-File .\install-windows.ps1
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\install-windows.ps1
 ```
 
-This applies the execution-policy option only to that process, not the laptop.
+Use this sequence if launching via `powershell.exe ... -File` did not work.
+`Unblock-File` removes the downloaded script's Internet-zone mark; do this
+only for a script you trust. The execution-policy change applies only to
+the current PowerShell process, not permanently to the laptop.
 Organization-enforced policies cannot be bypassed by this option; contact IT
 if scripts or third-party applications are blocked.
 
 ### Mac
 
-Download [install-macos.command](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.0/install-macos.command)
+Download [install-macos.command](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.1/install-macos.command)
 and save it in Downloads. Open **Terminal** and run:
 
 ```bash
@@ -35,7 +45,7 @@ and save it in Downloads. Open **Terminal** and run:
 
 Alternatively, download the repository's tagged source ZIP, extract it, and
 run the appropriate script from the extracted folder. When downloaded alone,
-each script fetches the matching `v1.0.0` source archive from this public repo.
+each script fetches the matching `v1.0.1` source archive from this public repo.
 These download links become available when that release is published.
 
 ### After setup
@@ -54,7 +64,13 @@ not grant access to ALLTV or its upstream systems.
 
 ## What setup changes
 
-- Installs the official, checksum-pinned Claude Desktop build **only if missing**.
+- Asks permission before stopping running Claude processes or installing
+  Claude Desktop. Only an explicit yes (or y) allows either action; invalid
+  answers are prompted again. Run setup interactively to answer these prompts.
+  Stopping Claude can discard unsaved work. If Claude reopens during setup,
+  setup asks again before changing its configuration.
+- Installs the official, checksum-pinned Claude Desktop build **only if missing
+  and you answer yes**.
   Existing Claude installations are not downgraded or replaced. Windows uses
   Anthropic's signed per-user installer. Mac installs the verified/notarized
   official app in `~/Applications` when neither user nor system Claude exists.
@@ -185,7 +201,7 @@ its neutral-identity generator, not a signed-in user's cache.
 After both platform CI jobs pass, create a matching tag and release:
 
 ```text
-gh release create v1.0.0 install-windows.ps1 install-macos.command --repo adobe-dss-aep/tps_tv_alltv_local --title "ALLTV local setup 1.0.0" --generate-notes
+gh release create v1.0.1 install-windows.ps1 install-macos.command --repo adobe-dss-aep/tps_tv_alltv_local --title "ALLTV local setup 1.0.1" --generate-notes
 ```
 
 Users can then download either standalone script from the release. Creating a

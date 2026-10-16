@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": "adobe-dss-aep/tps_tv_alltv_local",
   "endpoint": "https://oneadobe-tps-tv-alltv-mcp-deploy-ethos510-prod-va6-dcadf7.cloud.adobe.io/mcp",
   "callbackPort": "8145",

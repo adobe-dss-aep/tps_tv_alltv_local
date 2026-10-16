@@ -8,7 +8,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$version = '1.0.0'
+$version = '1.0.1'
 $work = Join-Path ([IO.Path]::GetTempPath()) ('alltv-installer-' + [Guid]::NewGuid().ToString('N'))
 $installLock = $null
 
@@ -36,13 +36,60 @@ function Get-ClaudeInstallation {
     return $null
 }
 
+function Read-ConsentAnswer([string]$Prompt) {
+    if ([Console]::IsInputRedirected) {
+        Write-Host $Prompt
+        return [Console]::ReadLine()
+    }
+    Read-Host $Prompt
+}
+
+function Confirm-YesNo([string]$Question) {
+    while ($true) {
+        $answer = Read-ConsentAnswer "$Question (yes/no)"
+        if ($null -eq $answer) { throw 'No answer received. Run the installer in an interactive PowerShell window.' }
+        switch ($answer.Trim().ToLowerInvariant()) {
+            { $_ -in 'yes', 'y' } { return $true }
+            { $_ -in 'no', 'n' } { return $false }
+            default { Write-Host 'Please answer yes or no.' }
+        }
+    }
+}
+
+function Get-ClaudeProcesses {
+    Get-Process | Where-Object { $_.ProcessName -eq 'Claude' -or $_.ProcessName -like 'Claude Helper*' }
+}
+
+function Stop-ClaudeWithConsent {
+    $processes = @(Get-ClaudeProcesses)
+    if (-not $processes.Count) { return }
+    if (-not (Confirm-YesNo 'Claude is running. Stop all Claude processes? Unsaved work may be lost.')) {
+        throw 'Installation cancelled. Quit Claude Desktop before running this installer again.'
+    }
+    foreach ($process in $processes) {
+        if (Get-Process -Id $process.Id -ErrorAction SilentlyContinue) {
+            Stop-Process -Id $process.Id -Force -ErrorAction Stop
+        }
+    }
+    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+        if (-not @(Get-ClaudeProcesses).Count) { return }
+        Start-Sleep -Milliseconds 500
+    }
+    throw 'Some Claude processes are still running. Quit them and rerun the installer.'
+}
+
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this installer on Windows 10/11 (64-bit).' }
     if ($SkipClaudeInstall -and -not $ConfigPath) {
         throw '-SkipClaudeInstall is for isolated staging and requires an explicit -ConfigPath.'
     }
-    if (-not $SkipClaudeInstall -and (Get-Process -Name Claude -ErrorAction SilentlyContinue)) {
-        throw 'Fully quit Claude Desktop, including its system-tray icon, then run this installer again.'
+    $claude = $null
+    if (-not $SkipClaudeInstall) {
+        Stop-ClaudeWithConsent
+        $claude = Get-ClaudeInstallation
+        if (-not $claude -and -not (Confirm-YesNo 'Claude Desktop is not installed. Install it now?')) {
+            throw 'This install requires Claude Desktop'
+        }
     }
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     $InstallRoot = [IO.Path]::GetFullPath($InstallRoot)
@@ -82,9 +129,7 @@ try {
     if ($LASTEXITCODE -ne 0 -or $actualVersion -ne "v$($manifest.node.version)") {
         throw 'The private Node.js runtime is not the expected version.'
     }
-    $claude = $null
     if (-not $SkipClaudeInstall) {
-        $claude = Get-ClaudeInstallation
         if (-not $claude) {
             Write-Host 'Installing Claude Desktop for this Windows user...'
             $installer = Join-Path $work 'ClaudeSetup.exe'
@@ -102,9 +147,7 @@ try {
             $claude = Get-ClaudeInstallation
             if (-not $claude) { throw 'Claude setup finished, but Claude Desktop could not be found. Install it from https://claude.com/download and retry.' }
         }
-        if (Get-Process -Name Claude -ErrorAction SilentlyContinue) {
-            throw 'Claude setup opened Claude. Fully quit it, then rerun this installer to configure ALLTV.'
-        }
+        Stop-ClaudeWithConsent
     }
     if (-not $ConfigPath) {
         if ($claude.PackageFamilyName) {
@@ -126,6 +169,7 @@ try {
     $entry = Join-Path $launcher 'launch.mjs'
     & $node (Join-Path $source 'tools\verify.mjs') $node $entry
     if ($LASTEXITCODE -ne 0) { throw 'The new launcher failed its offline verification. Existing Claude settings are unchanged.' }
+    if (-not $SkipClaudeInstall) { Stop-ClaudeWithConsent }
     & $node (Join-Path $source 'tools\configure.mjs') --config $ConfigPath --runtime $node --launcher $entry
     if ($LASTEXITCODE -ne 0) { throw 'Claude configuration could not be updated.' }
     Write-Host "ALLTV installed successfully at $deployment"

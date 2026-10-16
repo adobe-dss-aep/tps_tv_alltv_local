@@ -37,17 +37,8 @@ jobs:
         run: npm test
       - name: Test on-demand launcher and synthetic OAuth
         run: npm run test:launcher
-      - name: Test official Claude installation on Windows runner
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          .\install-windows.ps1 -InstallRoot "$env:RUNNER_TEMP\ALLTV vendor check" -ConfigPath "$env:RUNNER_TEMP\ALLTV vendor settings\claude_desktop_config.json"
-      - name: Test official Claude installation on Mac runner
-        if: runner.os == 'macOS'
-        run: |
-          /bin/bash install-macos.command \
-            --install-root "$RUNNER_TEMP/ALLTV vendor check" \
-            --config-path "$RUNNER_TEMP/ALLTV vendor settings/claude_desktop_config.json"
+      - name: Test official Claude installation with explicit CI consent
+        run: node tests/vendor-install.mjs
       - name: Retain npm diagnostics on failed Mac installs
         if: failure() && runner.os == 'macOS'
         uses: actions/upload-artifact@v4

@@ -1,6 +1,6 @@
 {
   "name": "alltv-local-installers",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "engines": { "node": ">=22.14.0" },
