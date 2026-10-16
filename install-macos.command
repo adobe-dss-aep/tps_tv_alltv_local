@@ -45,6 +45,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'fail "Setup interrupted. Existing Claude settings may not yet have been updated; rerun setup."' INT TERM
 /bin/mkdir -p "$install_root"
+# npm interprets a symlinked prefix as a linked package (notably /var versus /private/var).
+install_root="$(cd "$install_root" && pwd -P)"
+lock="$install_root/.setup-lock"
 if ! /bin/mkdir "$lock"; then
     fail "Another setup may be running. If it was interrupted, check $lock/pid before removing that lock directory."
 fi
