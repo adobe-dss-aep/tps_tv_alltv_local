@@ -99,7 +99,10 @@ for file in launch.mjs upstream.mjs on-demand.mjs coordination.mjs loader.mjs ca
     /bin/cp "$source_dir/launcher/$file" "$launcher/$file"
 done
 printf 'Installing locked ALLTV dependencies (no package install scripts)...\n'
-"$node" "$runtime/lib/node_modules/npm/bin/npm-cli.js" ci --prefix "$launcher" --omit=dev --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org
+(
+    cd "$launcher"
+    "$node" "$runtime/lib/node_modules/npm/bin/npm-cli.js" ci --prefix "$launcher" --omit=dev --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org
+)
 "$node" "$source_dir/tools/verify.mjs" "$node" "$launcher/launch.mjs"
 "$node" "$source_dir/tools/configure.mjs" --config "$config_path" --runtime "$node" --launcher "$launcher/launch.mjs"
 printf 'ALLTV installed successfully at %s\nClaude settings: %s\n' "$deployment" "$config_path"

@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, realpath, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const manifest = JSON.parse(await readFile(new URL("../installer.json", import.meta.url), "utf8"));
 const supported = ["win32", "darwin"].includes(process.platform);
+
+async function assertInside(root, file) {
+  const local = relative(await realpath(root), await realpath(file));
+  assert.ok(!isAbsolute(local) && local !== ".." && !local.startsWith(`..${sep}`),
+    `Expected ${file} to be inside ${root}, got relative path ${local}`);
+}
 
 function install(installRoot, configPath) {
   const command = process.platform === "win32" ? "powershell.exe" : "/bin/bash";
@@ -64,8 +70,8 @@ test("real isolated installation and update preserve settings and never authenti
     assert.equal(config.theme, "dark");
     assert.equal(config.mcpServers.oldAlltv, undefined);
     const entry = config.mcpServers[manifest.serverName];
-    assert.ok(entry.command.startsWith(installRoot));
-    assert.ok(entry.args[0].startsWith(installRoot));
+    await assertInside(installRoot, entry.command);
+    await assertInside(installRoot, entry.args[0]);
     assert.equal(entry.args[1], manifest.endpoint);
     assert.equal(entry.args[2], "8145");
     await readFile(entry.args[0]);
