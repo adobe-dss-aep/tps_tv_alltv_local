@@ -1,0 +1,49 @@
+name: Test laptop installers
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-11-arm, macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check Mac script syntax
+        if: runner.os == 'macOS'
+        run: /bin/bash -n install-macos.command
+      - name: Check Windows PowerShell syntax
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $errors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD\install-windows.ps1", [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count) { $errors | Format-List; exit 1 }
+      - name: Test config safety and actual isolated installs
+        run: npm test
+      - name: Install launcher test dependencies
+        run: npm --prefix launcher ci --ignore-scripts --no-fund
+      - name: Test on-demand launcher and synthetic OAuth
+        run: npm run test:launcher
+      - name: Test official Claude installation on Windows runner
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\install-windows.ps1 -InstallRoot "$env:RUNNER_TEMP\ALLTV vendor check" -ConfigPath "$env:RUNNER_TEMP\ALLTV vendor settings\claude_desktop_config.json"
+      - name: Test official Claude installation on Mac runner
+        if: runner.os == 'macOS'
+        run: |
+          /bin/bash install-macos.command \
+            --install-root "$RUNNER_TEMP/ALLTV vendor check" \
+            --config-path "$RUNNER_TEMP/ALLTV vendor settings/claude_desktop_config.json"

@@ -1,0 +1,11 @@
+{
+  "name": "alltv-local-installers",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.14.0" },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:launcher": "npm --prefix launcher test"
+  }
+}

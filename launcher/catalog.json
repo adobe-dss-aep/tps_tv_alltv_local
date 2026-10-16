@@ -1,0 +1,576 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "tps_tv_read_sharepoint",
+      "description": "Return the SharePoint sites and content associated with the signed-in user. Defaults to the signed-in user: \"the signed-in user\".",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "description": "Display name to look up. Defaults to \"the signed-in user\".",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "tps_tv_add_to_sharepoint",
+      "description": "Upload an asset (file or link), with its supporting request/project/account record, to SharePoint via Power Automate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Asset type, e.g. \"Scoping Doc\", \"Company Logo\", \"Other Link\"."
+          },
+          "displayName": {
+            "description": "User-supplied display name — only present for asset types without a fixed label.",
+            "type": "string",
+            "minLength": 1
+          },
+          "displayFileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name shown for this asset: displayName if supplied, otherwise assetType."
+          },
+          "summary": {
+            "description": "Summary text describing the asset contents. Omitted for asset types that don't show a Summary field.",
+            "type": "string",
+            "minLength": 1
+          },
+          "linkUrl": {
+            "description": "URL for link-based assets (assetType \"Other Link\"). Omit for file-based assets.",
+            "type": "string",
+            "format": "uri"
+          },
+          "fileName": {
+            "description": "Uploaded file's name, e.g. \"document.pdf\". Omit for link-based assets.",
+            "type": "string",
+            "minLength": 1
+          },
+          "fileExtension": {
+            "description": "Uploaded file's extension including the dot, e.g. \".pdf\". Omit for link-based assets.",
+            "type": "string",
+            "minLength": 1
+          },
+          "fileType": {
+            "description": "Uploaded file's MIME type, e.g. \"application/pdf\". Omit for link-based assets.",
+            "type": "string",
+            "minLength": 1
+          },
+          "fileContent": {
+            "description": "Base64-encoded file content. Omit for link-based assets.",
+            "type": "string",
+            "minLength": 1
+          },
+          "request": {
+            "description": "Deal Registration / request record associated with this document.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "project": {
+            "description": "Project record associated with this document.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "account": {
+            "description": "Account record associated with this document.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "sharepoint": {
+            "description": "Existing SharePoint assets for this request. Defaults to { countassets: 0, assets: [] } when the request has none yet.",
+            "type": "object",
+            "properties": {
+              "countassets": {
+                "type": "number"
+              },
+              "assets": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "countassets",
+              "assets"
+            ]
+          }
+        },
+        "required": [
+          "assetType",
+          "displayFileName"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://tps-tv/add-to-sharepoint.html"
+        },
+        "ui/resourceUri": "ui://tps-tv/add-to-sharepoint.html"
+      }
+    },
+    {
+      "name": "tps_tv_read_direct_reports",
+      "description": "Return the team members associated with the signed-in user: \"the signed-in user\". Conversational by default (plain data, no widget). Only set _meta: { useWidget: true } on the call when the user wants an interactive widget instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "description": "Testing only, requires server-side identity testing permission: overrides the signed-in user's display name for this call.",
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "description": "Testing only, requires server-side identity testing permission: overrides the signed-in user's email for this call.",
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://tps-tv/myteam.html"
+        },
+        "ui/resourceUri": "ui://tps-tv/myteam.html"
+      }
+    },
+    {
+      "name": "tps_tv_read_tpsc_user_summary",
+      "description": "Return TPSC data (Deal Registrations) for the signed-in user or one of their direct reports. Do not ask the user for their name, email, or job title — never required. For \"my own\" requests, call this with no arguments at all; it already knows the caller is \"the signed-in user\" <(resolved securely on first use)>. Only pass displayName/email when the request is explicitly about a different person (one of the signed-in user's direct reports) — that's validated against the team roster. jobTitle is never required. This tool never shows a widget, under any circumstances. To display the result (optionally after enriching it with data from another source), call tps_tv_read_tpsc_user_summary_widget with the final { projects, requests } data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "description": "Only set this when asking about someone else (a direct report). Omit for \"my own\" requests — defaults to \"the signed-in user\".",
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "description": "Only set this when asking about someone else (a direct report). Omit for \"my own\" requests — defaults to \"(resolved securely on first use)\".",
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "jobTitle": {
+            "description": "Optional, rarely needed — do not ask the user for this.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "tps_tv_read_tpsc_user_summary_widget",
+      "description": "Display TPSC summary data in the interactive widget. Always shows the widget — this is the ONLY tool that does for TPSC summaries. Never fetches anything itself; call tps_tv_read_tpsc_user_summary first to get the data (optionally enrich it with data from another source), then call this tool with the result to display it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "projects": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "requests": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "required": [
+              "projects",
+              "requests"
+            ],
+            "description": "The { projects, requests } payload to display — the (optionally enriched) result of a prior tps_tv_read_tpsc_user_summary call."
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://tps-tv/request-overview.html"
+        },
+        "ui/resourceUri": "ui://tps-tv/request-overview.html"
+      }
+    },
+    {
+      "name": "tps_tv_read_tpsc_request_detail",
+      "description": "Return TPSC detail for a specific request, project, and account. This tool never shows a widget, under any circumstances. To display the result (optionally after enriching it with data from another source), call tps_tv_read_tpsc_request_detail_widget with the final data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tpsrequestid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TPSC request ID."
+          },
+          "tpsprojectid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TPSC project ID."
+          },
+          "tpsaccountid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TPSC account ID."
+          }
+        },
+        "required": [
+          "tpsrequestid",
+          "tpsprojectid",
+          "tpsaccountid"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "tps_tv_read_tpsc_request_detail_widget",
+      "description": "Display TPSC request detail in the interactive widget. Always shows the widget — this is the ONLY tool that does for request detail. Never fetches anything itself; call tps_tv_read_tpsc_request_detail first to get the data (optionally enrich it with data from another source), then call this tool with the result to display it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "requests": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "projects": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "accounts": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "required": [
+              "requests",
+              "projects",
+              "accounts"
+            ],
+            "description": "The { requests, projects, accounts } payload to display — the (optionally enriched) result of a prior tps_tv_read_tpsc_request_detail call."
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://tps-tv/request-detail.html"
+        },
+        "ui/resourceUri": "ui://tps-tv/request-detail.html"
+      }
+    },
+    {
+      "name": "tps_tv_read_tpsc_opp_detail",
+      "description": "Return TPSC detail for a specific project and account. This tool never shows a widget, under any circumstances. To display the result (optionally after enriching it with data from another source), call tps_tv_read_tpsc_opp_detail_widget with the final data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tpsprojectid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TPSC project ID."
+          },
+          "tpsaccountid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TPSC account ID."
+          }
+        },
+        "required": [
+          "tpsprojectid",
+          "tpsaccountid"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "tps_tv_read_tpsc_opp_detail_widget",
+      "description": "Display TPSC project/opportunity detail in the interactive widget. Always shows the widget — this is the ONLY tool that does for opportunity detail. Never fetches anything itself; call tps_tv_read_tpsc_opp_detail first to get the data (optionally enrich it with data from another source), then call this tool with the result to display it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "projects": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "accounts": {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "required": [
+              "projects",
+              "accounts"
+            ],
+            "description": "The { projects, accounts } payload to display — the (optionally enriched) result of a prior tps_tv_read_tpsc_opp_detail call. Each project entry carries its own nested requests[] array."
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://tps-tv/project-detail.html"
+        },
+        "ui/resourceUri": "ui://tps-tv/project-detail.html"
+      }
+    },
+    {
+      "name": "tps_tv_summarize_document",
+      "description": "Generate a short summary of the given text via Azure OpenAI. Internal fallback for the tps_tv_add_to_sharepoint widget's \"New summary\" button — not intended for direct model use.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Prompt or extracted document text to summarize."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    },
+    {
+      "name": "tps_tv_take_it_with_you",
+      "description": "Publishes the given standalone-snapshot HTML and returns a QR code PNG url encoding a link to it. Internal to the TPSC widgets' \"take it with you\" button -- not intended for direct model use.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The standalone snapshot HTML to publish."
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "visibility": [
+            "app"
+          ]
+        }
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "Add to SharePoint",
+      "uri": "ui://tps-tv/add-to-sharepoint.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "resourceDomains": [
+              "https://cdnjs.cloudflare.com",
+              "https://adbecdn.blob.core.windows.net"
+            ],
+            "connectDomains": [
+              "https://cdnjs.cloudflare.com"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "My Team",
+      "uri": "ui://tps-tv/myteam.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "resourceDomains": [
+              "https://cdnjs.cloudflare.com",
+              "https://adbecdn.blob.core.windows.net"
+            ],
+            "connectDomains": [
+              "https://cdnjs.cloudflare.com"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Project Detail",
+      "uri": "ui://tps-tv/project-detail.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "resourceDomains": [
+              "https://cdnjs.cloudflare.com",
+              "https://adbecdn.blob.core.windows.net"
+            ],
+            "connectDomains": [
+              "https://cdnjs.cloudflare.com"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Request Detail",
+      "uri": "ui://tps-tv/request-detail.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "resourceDomains": [
+              "https://cdnjs.cloudflare.com",
+              "https://adbecdn.blob.core.windows.net"
+            ],
+            "connectDomains": [
+              "https://cdnjs.cloudflare.com"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Request Overview",
+      "uri": "ui://tps-tv/request-overview.html",
+      "mimeType": "text/html;profile=mcp-app",
+      "_meta": {
+        "ui": {
+          "csp": {
+            "resourceDomains": [
+              "https://cdnjs.cloudflare.com",
+              "https://adbecdn.blob.core.windows.net"
+            ],
+            "connectDomains": [
+              "https://cdnjs.cloudflare.com"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "resourceTemplates": [],
+  "prompts": []
+}
