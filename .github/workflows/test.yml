@@ -30,10 +30,11 @@ jobs:
           $tokens = $null
           [System.Management.Automation.Language.Parser]::ParseFile("$PWD\install-windows.ps1", [ref]$tokens, [ref]$errors) | Out-Null
           if ($errors.Count) { $errors | Format-List; exit 1 }
+      - name: Install launcher test dependencies
+        working-directory: launcher
+        run: npm ci --ignore-scripts --no-fund
       - name: Test config safety and actual isolated installs
         run: npm test
-      - name: Install launcher test dependencies
-        run: npm --prefix launcher ci --ignore-scripts --no-fund
       - name: Test on-demand launcher and synthetic OAuth
         run: npm run test:launcher
       - name: Test official Claude installation on Windows runner
@@ -47,3 +48,10 @@ jobs:
           /bin/bash install-macos.command \
             --install-root "$RUNNER_TEMP/ALLTV vendor check" \
             --config-path "$RUNNER_TEMP/ALLTV vendor settings/claude_desktop_config.json"
+      - name: Retain npm diagnostics on failed Mac installs
+        if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-diagnostics-${{ matrix.os }}
+          path: ~/.npm/_logs
+          retention-days: 1
