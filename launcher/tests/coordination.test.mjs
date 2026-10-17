@@ -97,3 +97,17 @@ test("the completed page replaces only the successful callback response", async 
   assert.ok(transformed.includes("options.events.emit(\"auth-code-received\", code, state)"));
   assert.throws(() => transformCallbackPage(`${source}\n`, html), /Unsupported mcp-remote callback bundle/);
 });
+
+test("the completion page retains Adobe styling without bundled fonts or external assets", async () => {
+  const html = await readFile(new URL("../pages/completed.html", import.meta.url), "utf8");
+  assert.match(html, /class="card"/);
+  assert.match(html, /class="wordmark"[^>]+aria-label="Adobe"/);
+  assert.match(html, /Technical Validation Team/);
+  assert.match(html, /class="art"[^>]+aria-label="Terminal window showing a successful authorization"/);
+  assert.match(html, /Authorization successful\./);
+  assert.match(html, /You can now close this tab and return to Claude\./);
+  assert.match(html, /--adobe-red:#EB1000/);
+  assert.match(html, /--font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif/);
+  assert.doesNotMatch(html, /@font-face|data:font|Adobe Clean|<script\b|<button\b|window\.close\(/i);
+  assert.doesNotMatch(html, /\b(?:src|href)\s*=|url\s*\(/i);
+});

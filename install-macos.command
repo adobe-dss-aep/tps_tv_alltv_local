@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 umask 077
-version="1.0.1"
+version="1.0.2"
 install_root="$HOME/Library/Application Support/ALLTV-MCP"
 config_path="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 skip_claude=0

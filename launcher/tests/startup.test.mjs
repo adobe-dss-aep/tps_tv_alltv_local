@@ -209,8 +209,9 @@ async function fixture(t, getStatus, {
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type"), /text\/html/);
     const html = await response.text();
-    assert.match(html, /ALLTV sign-in complete/);
-    assert.match(html, /You can close this tab and return to Claude\./);
+    assert.match(html, /Authorization successful\./);
+    assert.match(html, /Technical Validation Team/);
+    assert.match(html, /You can now close this tab and return to Claude\./);
     assert.doesNotMatch(html, /data:font|@font-face/);
     assert.doesNotMatch(html, /<button\b|<script\b|window\.close\(/);
   }

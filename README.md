@@ -17,7 +17,7 @@ may still require IT approval for Claude Desktop.
 
 ### Windows 10/11
 
-Download [install-windows.ps1](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.1/install-windows.ps1)
+Download [install-windows.ps1](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.2/install-windows.ps1)
 and save it in Downloads. Open **Windows PowerShell** and run:
 
 ```powershell
@@ -36,7 +36,7 @@ if scripts or third-party applications are blocked.
 
 ### Mac
 
-Download [install-macos.command](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.1/install-macos.command)
+Download [install-macos.command](https://github.com/adobe-dss-aep/tps_tv_alltv_local/releases/download/v1.0.2/install-macos.command)
 and save it in Downloads. Open **Terminal** and run:
 
 ```bash
@@ -45,7 +45,7 @@ and save it in Downloads. Open **Terminal** and run:
 
 Alternatively, download the repository's tagged source ZIP, extract it, and
 run the appropriate script from the extracted folder. When downloaded alone,
-each script fetches the matching `v1.0.1` source archive from this public repo.
+each script fetches the matching `v1.0.2` source archive from this public repo.
 These download links become available when that release is published.
 
 ### After setup
@@ -98,7 +98,9 @@ not grant access to ALLTV or its upstream systems.
 The public bundle contains only local launcher code, tool/resource schemas,
 and synthetic tests. It contains no credentials, business records, private
 server implementation, or proprietary embedded fonts. Its completion page
-uses system fonts and no external assets.
+restores the confirmation screen's Adobe wordmark, Technical Validation Team
+label, bordered card, and success illustration, with system-font fallbacks
+instead of the embedded Adobe Clean font. It loads no external assets.
 
 ### Locations
 
@@ -201,7 +203,7 @@ its neutral-identity generator, not a signed-in user's cache.
 After both platform CI jobs pass, create a matching tag and release:
 
 ```text
-gh release create v1.0.1 install-windows.ps1 install-macos.command --repo adobe-dss-aep/tps_tv_alltv_local --title "ALLTV local setup 1.0.1" --generate-notes
+gh release create v1.0.2 install-windows.ps1 install-macos.command --repo adobe-dss-aep/tps_tv_alltv_local --title "ALLTV local setup 1.0.2" --generate-notes
 ```
 
 Users can then download either standalone script from the release. Creating a

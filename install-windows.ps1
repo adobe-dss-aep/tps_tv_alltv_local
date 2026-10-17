@@ -8,7 +8,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$version = '1.0.1'
+$version = '1.0.2'
 $work = Join-Path ([IO.Path]::GetTempPath()) ('alltv-installer-' + [Guid]::NewGuid().ToString('N'))
 $installLock = $null
 
