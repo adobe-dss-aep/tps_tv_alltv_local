@@ -36,19 +36,20 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   await record("tools/call");
   if (request.params.arguments?.fail) throw new McpError(ErrorCode.InvalidParams, "Fixture tool rejected the request.");
-  let text = "protected tool payload";
-  if (request.params.arguments?.sample) {
-    const result = await server.createMessage({
-      messages: [{ role: "user", content: { type: "text", text: "Summarize the fixture." } }],
-      maxTokens: 32,
-    });
-    text = result.content.text;
-  }
   if (request.params._meta?.progressToken !== undefined) {
     await server.notification({
       method: "notifications/progress",
       params: { progressToken: request.params._meta.progressToken, progress: 1, total: 1 },
     });
+  }
+  let text = "protected tool payload";
+  if (request.params.arguments?.sample) {
+    // The sampling round trip lets the host process progress before the final response.
+    const result = await server.createMessage({
+      messages: [{ role: "user", content: { type: "text", text: "Summarize the fixture." } }],
+      maxTokens: 32,
+    });
+    text = result.content.text;
   }
   return {
     content: [{ type: "text", text }],
